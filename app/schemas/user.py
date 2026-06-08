@@ -53,3 +53,4 @@ class ResetPasswordRequest(BaseModel):
 class MessageResponse(BaseModel):
     message: str
     email_sent: bool = False
+    dev_reset_link: str | None = None

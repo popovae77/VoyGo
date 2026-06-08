@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
@@ -16,7 +17,7 @@ from app.schemas.user import (
     UserLogin,
     UserRead,
 )
-from app.services.auth_email import send_password_reset_email, send_welcome_email
+from app.services.auth_email import reset_link, send_password_reset_email, send_welcome_email
 from app.services.password_reset import (
     create_password_reset_token,
     get_valid_reset_token,
@@ -62,14 +63,20 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> Token:
 
 @router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> MessageResponse:
+    settings = get_settings()
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     email_sent = False
+    dev_reset_link = None
     if user is not None:
         raw_token = create_password_reset_token(db, user)
         email_sent = send_password_reset_email(to=user.email, reset_token=raw_token)
+        if not email_sent and settings.app_debug:
+            dev_reset_link = reset_link(raw_token)
+            print(f"\n[password-reset] SMTP недоступен. Ссылка для локального теста:\n{dev_reset_link}\n")
     return MessageResponse(
         message="Если аккаунт с этим email существует, мы отправили ссылку для сброса пароля.",
         email_sent=email_sent,
+        dev_reset_link=dev_reset_link,
     )
 
 

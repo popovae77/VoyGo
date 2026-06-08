@@ -59,8 +59,24 @@ Booking.com / Airbnb — только партнёрские программы,
 pytest
 ```
 
-## Docker
+## Docker (локально)
 
 ```bash
 docker compose up --build
 ```
+
+## Продакшен (voyago.bizml.ru)
+
+Полная инструкция: **[deploy/DEPLOY.md](deploy/DEPLOY.md)**
+
+Кратко на VPS:
+
+```bash
+git clone https://github.com/popovae77/VoyGo.git /opt/voyago
+cd /opt/voyago
+cp deploy/.env.production.example .env   # заполнить секреты
+bash deploy/setup-server.sh
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+После привязки DNS и получения SSL — `https://voyago.bizml.ru`.

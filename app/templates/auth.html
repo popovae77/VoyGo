@@ -138,9 +138,13 @@
     let authMode = "login";
     let resetToken = null;
 
-    function showStatus(text, isError = false) {
+    function showStatus(text, isError = false, html = null) {
       const el = document.getElementById("authStatus");
-      el.textContent = text;
+      if (html) {
+        el.innerHTML = html;
+      } else {
+        el.textContent = text;
+      }
       el.classList.toggle("error", isError);
       el.classList.remove("hidden");
     }
@@ -248,9 +252,18 @@
           body: JSON.stringify({ email: document.getElementById("forgotEmail").value })
         });
         let text = data.message;
-        if (!data.email_sent) {
-          text += " Письмо не ушло — проверьте SMTP_HOST, SMTP_USER и SMTP_PASSWORD в .env.";
+        if (data.email_sent) {
+          showStatus(text);
+          return;
         }
+        if (data.dev_reset_link) {
+          showStatus("", false,
+            `${text}<br><br><strong>SMTP заблокирован провайдером.</strong> Для локального теста откройте ссылку:<br>` +
+            `<a href="${data.dev_reset_link}">${data.dev_reset_link}</a>`
+          );
+          return;
+        }
+        text += " Письмо не ушло. Используйте EMAIL_PROVIDER=brevo (см. .env.example) или APP_DEBUG=true.";
         showStatus(text);
       } catch (err) {
         showStatus(err.message, true);

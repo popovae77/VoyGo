@@ -33,7 +33,11 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_from: str | None = None
     smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
+    email_provider: str = "smtp"
+    brevo_api_key: str | None = None
     app_public_url: str = "http://127.0.0.1:8000"
+    app_debug: bool = False
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -42,6 +46,16 @@ class Settings(BaseSettings):
     @property
     def smtp_configured(self) -> bool:
         return bool(self.smtp_host and self.smtp_user and self.smtp_password)
+
+    @property
+    def brevo_configured(self) -> bool:
+        return bool(self.brevo_api_key and (self.smtp_from or self.smtp_user))
+
+    @property
+    def email_configured(self) -> bool:
+        if self.email_provider == "brevo":
+            return self.brevo_configured
+        return self.smtp_configured
 
 
 @lru_cache

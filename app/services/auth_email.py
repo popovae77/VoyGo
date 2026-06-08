@@ -6,6 +6,12 @@ from app.core.config import get_settings
 from app.services.email_sender import send_email
 
 
+def reset_link(token: str) -> str:
+    settings = get_settings()
+    base = settings.app_public_url.rstrip("/")
+    return f"{base}/auth?reset={token}"
+
+
 def _public_url(path: str) -> str:
     settings = get_settings()
     base = settings.app_public_url.rstrip("/")
@@ -31,7 +37,7 @@ def send_welcome_email(*, to: str, full_name: str | None) -> bool:
 
 def send_password_reset_email(*, to: str, reset_token: str) -> bool:
     settings = get_settings()
-    link = _public_url(f"/auth?reset={reset_token}")
+    link = reset_link(reset_token)
     subject = f"{settings.app_name} — сброс пароля"
     body = (
         "Вы запросили сброс пароля.\n\n"
