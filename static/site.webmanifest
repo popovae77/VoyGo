@@ -1,0 +1,19 @@
+{
+  "name": "Voyago",
+  "short_name": "Voyago",
+  "icons": [
+    {
+      "src": "/static/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#2e5bff",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

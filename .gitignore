@@ -1,0 +1,64 @@
+# ——— Секреты и локальная среда ———
+.env
+.env.local
+.env.*.local
+!.env.example
+
+.venv/
+venv/
+env/
+
+# ——— Python ———
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.egg-info/
+dist/
+build/
+
+# ——— База данных (локальная) ———
+data/*.db
+data/*.db-*
+
+# ——— OS / IDE ———
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ——— Логи ———
+*.log
+
+# ——— Курсовая / черновики / личные файлы (не код Voyago) ———
+*.docx
+*.pages
+*.pdf
+coursework*.txt
+user_original.txt
+extracted_damaged.txt
+_build_coursework.py
+build_final_coursework.py
+build_source.py
+rebuild_coursework.py
+proseify.py
+generate_diagrams.py
+diagrams/
+_test.docx
+
+# Случайные загрузки в корень проекта
+_.jpeg
+Mid last year*
+
+# Cursor (локальные артефакты)
+.cursor/

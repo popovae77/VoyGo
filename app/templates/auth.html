@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход — Voyago</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="manifest" href="/static/site.webmanifest">
+  <meta name="theme-color" content="#2e5bff">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/voyago.css">
+  <style>nav{display:none}</style>
+  <style>
+    :root {
+      --ink: #000000;
+      --muted: #5c5c5c;
+      --line: #000000;
+      --accent: #2e5bff;
+      --accent-soft: #eef2ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--ink); }
+    button, input { font: inherit; border-radius: 0; }
+    input { border: 1px solid var(--line); padding: 11px 14px; width: 100%; }
+    label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: grid; gap: 8px; }
+    button:not(.auth-tab):not(.auth-link-btn):not(.auth-submit) { border: 0; color: #fff; font-weight: 800; cursor: pointer; background: var(--accent); width: 100%; min-height: 48px; }
+    .hidden { display: none !important; }
+    .auth-text-link { margin: 14px 0 0; text-align: center; font-size: 14px; color: var(--muted); }
+    .auth-text-link a {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: 0;
+      text-transform: none;
+      cursor: pointer;
+    }
+    .auth-text-link a:hover { text-decoration: underline; }
+    .auth-status {
+      margin: 16px 0 0; padding: 12px 14px; font-size: 14px; line-height: 1.5;
+      border: 1px solid var(--line); background: var(--accent-soft);
+    }
+    .auth-status.error { background: #fff5f5; border-color: #c00; }
+    .auth-link-btn {
+      margin-top: 12px; background: #fff !important; color: var(--ink) !important;
+      border: 1px solid var(--line) !important; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+  </style>
+</head>
+<body class="auth-page">
+  <div class="auth-shell">
+    <div class="auth-brand" role="img" aria-label="Терраса с видом на море">
+      <div class="auth-brand-inner">
+        <span class="auth-brand-tag">Voyago / travel</span>
+        <div class="mark">V</div>
+        <strong>Voyago</strong>
+        <p class="lead">Умный подбор путешествий под бюджет — как в журнале, только с реальными ценами.</p>
+      </div>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-card-head">
+        <h1 id="authTitle">Вход</h1>
+        <p class="lead" id="authSubtitle">Сохраняйте поиски, избранное и уведомления о ценах</p>
+      </div>
+
+      <p id="authStatus" class="auth-status hidden" role="status"></p>
+
+      <form id="loginForm" class="auth-panel">
+        <label>
+          Логин
+          <input id="loginEmail" type="email" required placeholder="you@example.com" autocomplete="username">
+        </label>
+        <label>
+          Пароль
+          <input id="loginPassword" type="password" required minlength="6" placeholder="Ваш пароль" autocomplete="current-password">
+        </label>
+        <button type="submit" class="auth-submit">Войти</button>
+        <p class="auth-text-link">
+          <a href="#" onclick="event.preventDefault(); setAuthMode('forgot')">Забыли пароль?</a>
+        </p>
+        <p class="auth-text-link">
+          Нет аккаунта? <a href="#" onclick="event.preventDefault(); setAuthMode('register')">Зарегистрироваться</a>
+        </p>
+      </form>
+
+      <form id="registerForm" class="auth-panel hidden">
+        <label>
+          Имя
+          <input id="registerName" type="text" placeholder="Как к вам обращаться" autocomplete="name">
+        </label>
+        <label>
+          Email
+          <input id="registerEmail" type="email" required placeholder="you@example.com" autocomplete="email">
+        </label>
+        <label>
+          Пароль
+          <input id="registerPassword" type="password" required minlength="6" placeholder="Минимум 6 символов" autocomplete="new-password">
+        </label>
+        <button type="submit" class="auth-submit">Создать аккаунт</button>
+        <p class="auth-text-link">
+          Уже есть аккаунт? <a href="#" onclick="event.preventDefault(); setAuthMode('login')">Войти</a>
+        </p>
+      </form>
+
+      <form id="forgotForm" class="auth-panel hidden">
+        <label>
+          Email
+          <input id="forgotEmail" type="email" required placeholder="you@example.com" autocomplete="email">
+        </label>
+        <button type="submit" class="auth-submit">Отправить ссылку</button>
+        <button type="button" class="auth-link-btn" onclick="setAuthMode('login')">← Вернуться ко входу</button>
+      </form>
+
+      <form id="resetForm" class="auth-panel hidden">
+        <label>
+          Новый пароль
+          <input id="newPassword" type="password" required minlength="6" placeholder="Минимум 6 символов" autocomplete="new-password">
+        </label>
+        <label>
+          Повторите пароль
+          <input id="newPasswordConfirm" type="password" required minlength="6" placeholder="Ещё раз" autocomplete="new-password">
+        </label>
+        <button type="submit" class="auth-submit">Сохранить пароль</button>
+        <button type="button" class="auth-link-btn" onclick="setAuthMode('login')">← Вернуться ко входу</button>
+      </form>
+
+      <p class="auth-back"><a href="/">← На главную</a></p>
+    </div>
+  </div>
+
+  <script>
+    const API = "/api/v1";
+    let authMode = "login";
+    let resetToken = null;
+
+    function showStatus(text, isError = false) {
+      const el = document.getElementById("authStatus");
+      el.textContent = text;
+      el.classList.toggle("error", isError);
+      el.classList.remove("hidden");
+    }
+
+    function hideStatus() {
+      document.getElementById("authStatus").classList.add("hidden");
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      hideStatus();
+
+      const isLogin = mode === "login";
+      const isRegister = mode === "register";
+      const isForgot = mode === "forgot";
+      const isReset = mode === "reset";
+
+      document.getElementById("loginForm").classList.toggle("hidden", !isLogin);
+      document.getElementById("registerForm").classList.toggle("hidden", !isRegister);
+      document.getElementById("forgotForm").classList.toggle("hidden", !isForgot);
+      document.getElementById("resetForm").classList.toggle("hidden", !isReset);
+
+      const titles = {
+        login: ["Вход", "Сохраняйте поиски, избранное и уведомления о ценах"],
+        register: ["Регистрация", "Сохраняйте поиски, избранное и уведомления о ценах"],
+        forgot: ["Сброс пароля", "Укажите email — пришлём ссылку для нового пароля"],
+        reset: ["Новый пароль", "Придумайте пароль не короче 6 символов"],
+      };
+      const [title, subtitle] = titles[mode] || titles.login;
+      document.getElementById("authTitle").textContent = title;
+      document.getElementById("authSubtitle").textContent = subtitle;
+
+      if (isForgot) {
+        const email = document.getElementById("loginEmail").value;
+        if (email) document.getElementById("forgotEmail").value = email;
+      }
+    }
+
+    async function request(path, options = {}) {
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      const response = await fetch(API + path, { ...options, headers });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const detail = data.detail;
+        const message = Array.isArray(detail)
+          ? detail.map(item => item.msg || item).join(", ")
+          : (detail || "Ошибка запроса");
+        throw new Error(message);
+      }
+      return data;
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const data = await request("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            email: document.getElementById("loginEmail").value,
+            password: document.getElementById("loginPassword").value
+          })
+        });
+        localStorage.setItem("voyagoToken", data.access_token);
+        window.location.href = "/";
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    });
+
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const reg = await request("/auth/register", {
+          method: "POST",
+          body: JSON.stringify({
+            email: document.getElementById("registerEmail").value,
+            password: document.getElementById("registerPassword").value,
+            full_name: document.getElementById("registerName").value || null
+          })
+        });
+        if (reg.welcome_email_sent) {
+          showStatus("Аккаунт создан. На почту отправлено письмо с подтверждением регистрации.");
+        } else {
+          showStatus("Аккаунт создан. Письмо не отправлено — настройте SMTP в .env (Mail.ru, Gmail).");
+        }
+        const data = await request("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            email: document.getElementById("registerEmail").value,
+            password: document.getElementById("registerPassword").value
+          })
+        });
+        localStorage.setItem("voyagoToken", data.access_token);
+        window.location.href = "/";
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    });
+
+    document.getElementById("forgotForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const data = await request("/auth/forgot-password", {
+          method: "POST",
+          body: JSON.stringify({ email: document.getElementById("forgotEmail").value })
+        });
+        let text = data.message;
+        if (!data.email_sent) {
+          text += " Письмо не ушло — проверьте SMTP_HOST, SMTP_USER и SMTP_PASSWORD в .env.";
+        }
+        showStatus(text);
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    });
+
+    document.getElementById("resetForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const p1 = document.getElementById("newPassword").value;
+      const p2 = document.getElementById("newPasswordConfirm").value;
+      if (p1 !== p2) {
+        showStatus("Пароли не совпадают", true);
+        return;
+      }
+      if (!resetToken) {
+        showStatus("Ссылка недействительна. Запросите сброс пароля снова.", true);
+        return;
+      }
+      try {
+        const data = await request("/auth/reset-password", {
+          method: "POST",
+          body: JSON.stringify({ token: resetToken, new_password: p1 })
+        });
+        showStatus(data.message);
+        resetToken = null;
+        window.history.replaceState({}, "", "/auth");
+        setTimeout(() => setAuthMode("login"), 2500);
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    });
+
+    if (localStorage.getItem("voyagoToken")) {
+      window.location.href = "/";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    resetToken = params.get("reset");
+    if (resetToken) {
+      setAuthMode("reset");
+    } else if (params.get("mode") === "register") {
+      setAuthMode("register");
+    } else {
+      setAuthMode("login");
+    }
+  </script>
+</body>
+</html>

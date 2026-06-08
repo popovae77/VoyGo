@@ -1,0 +1,1 @@
+Alembic migrations directory. For MVP the app also creates tables on startup via SQLAlchemy metadata.
