@@ -1,6 +1,6 @@
 # Voyago
 
-MVP веб-сервиса для подбора путешествия по бюджету и типу отдыха. Стек: FastAPI, SQLite, SQLAlchemy 2.x, Pydantic v2, JWT.
+Сервис для путешествий без наценок. MVP веб-сервиса для подбора путешествия по бюджету и типу отдыха. Стек: FastAPI, SQLite, SQLAlchemy 2.x, Pydantic v2, JWT.
 
 ## Запуск
 
