@@ -65,7 +65,7 @@ pytest
 docker compose up --build
 ```
 
-## Продакшен (voyago.bizml.ru)
+## Продакшен (voyago.ru)
 
 Полная инструкция: **[deploy/DEPLOY.md](deploy/DEPLOY.md)**
 
@@ -79,4 +79,4 @@ bash deploy/setup-server.sh
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-После привязки DNS и получения SSL — `https://voyago.bizml.ru`.
+После привязки DNS и получения SSL — `https://voyago.ru`.

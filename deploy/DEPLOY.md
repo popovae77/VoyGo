@@ -1,157 +1,134 @@
-# Деплой Voyago в прод (voyago.bizml.ru)
+# Деплой Voyago — voyago.ru
 
-## Что нужно заранее
+## Что нужно
 
-| Что | Пример |
-|-----|--------|
-| VPS (Ubuntu 22.04+) | Timeweb, Selectel, Reg.ru, Hetzner |
-| Домен | `voyago.bizml.ru` |
-| Доступ по SSH | `root@IP_СЕРВЕРА` |
-| Репозиторий | https://github.com/popovae77/VoyGo |
-
-Минимум сервера: **1 CPU, 1 GB RAM, 10 GB SSD**.
+| | |
+|---|---|
+| VPS | Timeweb Cloud, IP `176.124.212.74` |
+| Домен | `voyago.ru` |
+| GitHub | https://github.com/popovae77/VoyGo |
 
 ---
 
-## 1. DNS
+## Шаг 1. DNS (Timeweb → Домены → voyago.ru → Редактор DNS)
 
-В панели домена `bizml.ru` (Mail.ru / biz.mail.ru):
+Две A-записи на IP сервера:
 
-- Тип: **A**
-- Имя: **voyago** (или `@` если нужен корень)
-- Значение: **IP вашего VPS**
+| Тип | Имя | Значение |
+|-----|-----|----------|
+| A | `voyago.ru` | `176.124.212.74` |
+| A | `www.voyago.ru` | `176.124.212.74` |
 
-Подождите 5–30 минут. Проверка:
+---
+
+## Шаг 2. Push кода на GitHub (на Mac)
+
+GitHub Desktop → Commit → Push origin.
+
+---
+
+## Шаг 3. SSH на сервер (на Mac, Терминал)
 
 ```bash
-ping voyago.bizml.ru
+ssh root@176.124.212.74
 ```
+
+Пароль — из Timeweb Cloud → ваш сервер → root.
 
 ---
 
-## 2. Подключение к серверу
-
-```bash
-ssh root@ВАШ_IP
-```
-
----
-
-## 3. Docker
+## Шаг 4. Установка (на сервере, по одной команде)
 
 ```bash
 apt-get update && apt-get install -y git
+```
+
+```bash
+rm -rf /opt/voyago
 git clone https://github.com/popovae77/VoyGo.git /opt/voyago
 cd /opt/voyago
+```
+
+```bash
 bash deploy/setup-server.sh
 ```
 
 ---
 
-## 4. Файл `.env` на сервере
+## Шаг 5. Файл .env (на сервере)
 
 ```bash
-cd /opt/voyago
 cp deploy/.env.production.example .env
-nano .env
-```
-
-Обязательно заполните:
-
-```env
-SECRET_KEY=...          # openssl rand -hex 32
-APP_PUBLIC_URL=https://voyago.bizml.ru
-CORS_ORIGINS=https://voyago.bizml.ru
-APP_DEBUG=false
-TRAVELPAYOUTS_TOKEN=...
-SERPAPI_API_KEY=...
-GEMINI_API_KEY=...      # или GROQ_API_KEY
-EMAIL_PROVIDER=brevo    # или smtp на VPS
-BREVO_API_KEY=...
-```
-
-Сгенерировать `SECRET_KEY`:
-
-```bash
 openssl rand -hex 32
 ```
 
+Скопируйте вывод `openssl` — это `SECRET_KEY`.
+
+```bash
+nano .env
+```
+
+Заполните:
+
+```env
+SECRET_KEY=вставьте-ключ-из-openssl
+APP_PUBLIC_URL=http://voyago.ru
+CORS_ORIGINS=http://voyago.ru,http://www.voyago.ru
+APP_DEBUG=false
+TRAVELPAYOUTS_TOKEN=...
+SERPAPI_API_KEY=...
+GEMINI_API_KEY=...
+```
+
+Сохранить: **Ctrl+O** → Enter → **Ctrl+X**
+
 ---
 
-## 5. Первый запуск (HTTP)
+## Шаг 6. Запуск
 
 ```bash
 cd /opt/voyago
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Проверка: откройте `http://voyago.bizml.ru` — должен открыться Voyago.
-
-Healthcheck: `http://voyago.bizml.ru/api/v1/health`
+Подождите 3–5 минут.
 
 ---
 
-## 6. SSL (HTTPS)
+## Шаг 7. Проверка
+
+- http://voyago.ru
+- http://www.voyago.ru
+- http://voyago.ru/api/v1/health
+
+---
+
+## Шаг 8. HTTPS (когда HTTP работает)
 
 ```bash
 cd /opt/voyago
-
 docker compose -f docker-compose.prod.yml run --rm certbot certonly \
-  --webroot \
-  --webroot-path=/var/www/certbot \
-  -d voyago.bizml.ru \
+  --webroot --webroot-path=/var/www/certbot \
+  -d voyago.ru -d www.voyago.ru \
   --email voyago_trip@mail.ru \
-  --agree-tos \
-  --no-eff-email
+  --agree-tos --no-eff-email
 
 cp deploy/nginx/prod.conf deploy/nginx/active.conf
 docker compose -f docker-compose.prod.yml exec nginx nginx -s reload
 ```
 
-Проверка: `https://voyago.bizml.ru`
+В `.env` смените на `https://voyago.ru` и перезапустите:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
 
 ---
 
-## 7. Обновление после изменений в GitHub
+## Обновление после изменений в коде
 
 ```bash
 cd /opt/voyago
 git pull
 docker compose -f docker-compose.prod.yml up -d --build
 ```
-
----
-
-## Полезные команды
-
-```bash
-# Логи приложения
-docker compose -f docker-compose.prod.yml logs -f api
-
-# Статус
-docker compose -f docker-compose.prod.yml ps
-
-# Остановить
-docker compose -f docker-compose.prod.yml down
-
-# Бэкап базы SQLite
-docker compose -f docker-compose.prod.yml exec api cat /app/data/voyago.db > voyago-backup.db
-```
-
----
-
-## Почта на проде
-
-1. **Brevo (рекомендуется)** — `EMAIL_PROVIDER=brevo`, ключ в `BREVO_API_KEY`
-2. **Mail.ru SMTP** — на VPS часто работает, если домашний провайдер блокировал порты
-
----
-
-## Если другой домен
-
-Замените `voyago.bizml.ru` в:
-
-- `deploy/nginx/init.conf`
-- `deploy/nginx/prod.conf`
-- `deploy/nginx/active.conf`
-- `.env` → `APP_PUBLIC_URL`, `CORS_ORIGINS`
