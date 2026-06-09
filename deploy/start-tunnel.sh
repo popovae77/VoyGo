@@ -1,20 +1,12 @@
 #!/usr/bin/env bash
-# Публичная ссылка на Voyago без открытия порта 80 (Cloudflare Tunnel).
+# Публичная ссылка на Voyago (Cloudflare Tunnel). Работает, если порт 80 снаружи закрыт.
 set -euo pipefail
 
 cd /opt/voyago
-source .venv/bin/activate
 
-pkill -f "uvicorn app.main:app" 2>/dev/null || true
-sleep 1
-
-nohup uvicorn app.main:app --host 127.0.0.1 --port 8080 --workers 1 > /tmp/voyago.log 2>&1 &
-sleep 3
-
-if ! curl -sf http://127.0.0.1:8080/api/v1/health >/dev/null; then
-  echo "Voyago не запустился. Лог:"
-  tail -20 /tmp/voyago.log
-  exit 1
+# Voyago на localhost:80
+if ! curl -sf http://127.0.0.1/api/v1/health >/dev/null; then
+  bash deploy/restart-native.sh
 fi
 
 if ! command -v cloudflared >/dev/null 2>&1; then
@@ -25,10 +17,10 @@ fi
 
 pkill cloudflared 2>/dev/null || true
 sleep 1
-nohup cloudflared tunnel --url http://127.0.0.1:8080 > /tmp/cloudflared.log 2>&1 &
+nohup cloudflared tunnel --url http://127.0.0.1:80 > /tmp/cloudflared.log 2>&1 &
 
-echo "Ждём публичную ссылку (до 30 сек)..."
-for _ in $(seq 1 30); do
+echo "Ждём ссылку (до 40 сек)..."
+for _ in $(seq 1 40); do
   url=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/cloudflared.log | head -1 || true)
   if [ -n "$url" ]; then
     echo ""
@@ -37,8 +29,11 @@ for _ in $(seq 1 30); do
     echo "$url"
     echo "============================================"
     echo ""
-    echo "В .env на сервере поставьте:"
-    echo "APP_PUBLIC_URL=$url"
+    echo "В .env на сервере:"
+    echo "  APP_PUBLIC_URL=$url"
+    echo "  CORS_ORIGINS=$url"
+    echo ""
+    echo "Потом: bash deploy/restart-native.sh"
     exit 0
   fi
   sleep 1

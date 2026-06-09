@@ -216,7 +216,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(330px, .95fr);
       gap: 24px;
-      align-items: stretch;
+      align-items: start;
       margin-bottom: 24px;
     }
 
@@ -274,12 +274,13 @@
     }
 
     .search-panel {
-      padding: 28px;
+      padding: 28px 28px 36px;
       display: grid;
       align-content: start;
       gap: 20px;
       border-radius: var(--radius);
       box-shadow: var(--shadow-strong);
+      overflow: visible;
     }
 
     .search-panel-head h2 {

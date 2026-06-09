@@ -2,7 +2,7 @@
 # Включить автодеплой: каждые 3 минуты сервер проверяет GitHub и пересобирает.
 set -euo pipefail
 
-chmod +x /opt/voyago/deploy/auto-pull.sh /opt/voyago/deploy/deploy.sh
+chmod +x /opt/voyago/deploy/auto-pull.sh /opt/voyago/deploy/deploy.sh /opt/voyago/deploy/restart-native.sh
 
 CRON_LINE='*/3 * * * * root /opt/voyago/deploy/auto-pull.sh >> /var/log/voyago-deploy.log 2>&1'
 

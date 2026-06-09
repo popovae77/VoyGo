@@ -219,17 +219,22 @@ input:focus, select:focus {
   margin-bottom: 64px !important;
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--ink);
+  align-items: start !important;
 }
 
 .hero-copy {
-  min-height: 520px !important;
+  min-height: 360px !important;
   border-radius: 0 !important;
   border: none !important;
   border-right: 1px solid var(--ink) !important;
   padding: 48px 40px !important;
-  background:
+  background-color: #4a5568 !important;
+  background-image:
     linear-gradient(180deg, rgba(0, 0, 0, .15) 0%, rgba(0, 0, 0, .72) 100%),
-    url("/static/img/hero-bg.jpg") center/cover !important;
+    url("/static/img/hero-bg.jpg") !important;
+  background-position: center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
   filter: none;
   box-shadow: none !important;
   display: grid !important;
@@ -269,8 +274,9 @@ input:focus, select:focus {
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  padding: 40px 36px !important;
+  padding: 40px 36px 48px !important;
   background: #fff !important;
+  overflow: visible !important;
 }
 
 .search-panel-head {

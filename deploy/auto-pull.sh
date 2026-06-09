@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Автодеплой без входящего SSH: сервер сам проверяет GitHub и пересобирает.
+# Автодеплой: сервер проверяет GitHub и перезапускает Voyago (без Docker).
 set -euo pipefail
 
 cd /opt/voyago
@@ -15,7 +15,6 @@ fi
 
 echo "[$(date -Iseconds)] Новый коммит $REMOTE — деплой..."
 git checkout main
-git pull --ff-only origin main
-docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
-docker image prune -f
+git reset --hard origin/main
+bash deploy/restart-native.sh
 echo "[$(date -Iseconds)] Deploy OK"

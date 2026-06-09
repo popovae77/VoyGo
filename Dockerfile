@@ -7,8 +7,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-ENV PIP_DEFAULT_TIMEOUT=300
-RUN pip install --no-cache-dir --retries 10 -r requirements.txt
+ENV PIP_DEFAULT_TIMEOUT=600
+RUN pip install --no-cache-dir --retries 15 -r requirements.txt
 
 COPY . .
 RUN mkdir -p data
