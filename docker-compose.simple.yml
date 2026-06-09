@@ -1,0 +1,16 @@
+# Упрощённый прод: только API на порту 80 (без nginx/certbot).
+# Используйте, если Docker Hub блокирует pull образов nginx/certbot.
+
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - voyago_data:/app/data
+    ports:
+      - "80:8000"
+
+volumes:
+  voyago_data:
