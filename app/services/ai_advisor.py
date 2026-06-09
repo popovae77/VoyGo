@@ -1,4 +1,4 @@
-"""Travel tips via Google Gemini or Groq (fallback)."""
+"""Travel tips via Ranvik, Groq, or Google Gemini (fallback)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
-AiProvider = Literal["gemini", "groq", "none"]
+AiProvider = Literal["ranvik", "groq", "gemini", "none"]
+
+_gemini_geo_blocked = False
 
 
 class GeminiGeoBlockedError(Exception):
@@ -25,21 +27,26 @@ class GeminiGeoBlockedError(Exception):
 
 
 def _ai_provider(settings: Settings) -> AiProvider:
-    if settings.gemini_api_key:
-        return "gemini"
+    if settings.ranvik_api_key:
+        return "ranvik"
     if settings.groq_api_key:
         return "groq"
+    if settings.gemini_api_key and not _gemini_geo_blocked:
+        return "gemini"
     return "none"
 
 
 def _missing_key_message() -> str:
-    return "Добавьте GEMINI_API_KEY или GROQ_API_KEY в .env, чтобы включить ИИ-подсказки."
+    return (
+        "ИИ недоступен. Добавьте RANVIK_API_KEY (api.ranvik.ru), "
+        "GROQ_API_KEY (console.groq.com) или GEMINI_API_KEY в .env и перезапустите сервер."
+    )
 
 
 def _geo_blocked_message() -> str:
     return (
         "Google Gemini недоступен в вашем регионе. "
-        "Добавьте бесплатный ключ Groq (console.groq.com) в GROQ_API_KEY в .env и перезапустите сервер."
+        "Используйте Ranvik (RANVIK_API_KEY) или Groq (GROQ_API_KEY) в .env."
     )
 
 
@@ -50,7 +57,12 @@ def _gemini_failure_kind(exc: httpx.HTTPStatusError) -> str | None:
     except (ValueError, AttributeError):
         message = exc.response.text or ""
     lowered = message.lower()
-    if "location is not supported" in lowered or "not available in your country" in lowered:
+    if (
+        "location is not supported" in lowered
+        or "user location is not supported" in lowered
+        or "not available in your country" in lowered
+        or "failed_precondition" in lowered
+    ):
         return "geo"
     if exc.response.status_code == 429 or "quota" in lowered or "rate limit" in lowered:
         return "quota"
@@ -106,6 +118,80 @@ def _parse_advice_json(content: str) -> dict[str, str | list[str]]:
     }
 
 
+def _openai_chat(
+    *,
+    url: str,
+    api_key: str,
+    model: str,
+    messages: list[dict[str, str]],
+    temperature: float,
+    json_mode: bool = False,
+    max_tokens: int = 600,
+    timeout: float = 20.0,
+) -> str:
+    body: dict = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "stream": False,
+    }
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+    response = httpx.post(
+        url,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json=body,
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    return str(payload["choices"][0]["message"]["content"]).strip()
+
+
+def _ranvik_chat(
+    settings: Settings,
+    *,
+    messages: list[dict[str, str]],
+    temperature: float,
+    json_mode: bool = False,
+    max_tokens: int = 600,
+    timeout: float = 20.0,
+) -> str:
+    return _openai_chat(
+        url=settings.ranvik_api_url,
+        api_key=settings.ranvik_api_key or "",
+        model=settings.ranvik_model,
+        messages=messages,
+        temperature=temperature,
+        json_mode=json_mode,
+        max_tokens=max_tokens,
+        timeout=timeout,
+    )
+
+
+def _groq_chat(
+    settings: Settings,
+    *,
+    messages: list[dict[str, str]],
+    temperature: float,
+    json_mode: bool = False,
+    max_tokens: int = 600,
+) -> str:
+    return _openai_chat(
+        url=GROQ_CHAT_URL,
+        api_key=settings.groq_api_key or "",
+        model=settings.groq_model,
+        messages=messages,
+        temperature=temperature,
+        json_mode=json_mode,
+        max_tokens=max_tokens,
+    )
+
+
 def _gemini_generate(
     settings: Settings,
     *,
@@ -115,6 +201,10 @@ def _gemini_generate(
     json_mode: bool = False,
     max_output_tokens: int = 1024,
 ) -> str:
+    global _gemini_geo_blocked
+    if _gemini_geo_blocked:
+        raise GeminiGeoBlockedError("Gemini blocked in this region")
+
     url = f"{GEMINI_BASE}/{settings.gemini_model}:generateContent"
     generation_config: dict = {
         "temperature": temperature,
@@ -136,7 +226,12 @@ def _gemini_generate(
         json=payload,
         timeout=30.0,
     )
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        if _gemini_failure_kind(exc) == "geo":
+            _gemini_geo_blocked = True
+        raise
     data = response.json()
     candidates = data.get("candidates") or []
     if not candidates:
@@ -148,58 +243,27 @@ def _gemini_generate(
     return text.strip()
 
 
-def _groq_chat(
-    settings: Settings,
-    *,
-    messages: list[dict[str, str]],
-    temperature: float,
-    json_mode: bool = False,
-    max_tokens: int = 600,
-) -> str:
-    body: dict = {
-        "model": settings.groq_model,
-        "temperature": temperature,
-        "messages": messages,
-        "max_tokens": max_tokens,
-    }
-    if json_mode:
-        body["response_format"] = {"type": "json_object"}
-    response = httpx.post(
-        GROQ_CHAT_URL,
-        headers={
-            "Authorization": f"Bearer {settings.groq_api_key}",
-            "Content-Type": "application/json",
-        },
-        json=body,
-        timeout=30.0,
-    )
-    response.raise_for_status()
-    return str(response.json()["choices"][0]["message"]["content"]).strip()
-
-
 def _llm_json_advice(settings: Settings, system: str, user: str) -> dict[str, str | list[str]]:
     geo_blocked = False
     last_error: Exception | None = None
 
-    if settings.gemini_api_key:
+    if settings.ranvik_api_key:
         try:
-            content = _gemini_generate(
+            content = _ranvik_chat(
                 settings,
-                system=system,
-                user=user,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
                 temperature=0.4,
                 json_mode=True,
-                max_output_tokens=2048,
+                max_tokens=1024,
+                timeout=15.0,
             )
             return _parse_advice_json(content)
-        except httpx.HTTPStatusError as exc:
+        except (httpx.HTTPError, ValueError, KeyError, json.JSONDecodeError) as exc:
             last_error = exc
-            if _gemini_failure_kind(exc) == "geo":
-                geo_blocked = True
-            logger.warning("Gemini advice failed: %s", exc)
-        except (ValueError, json.JSONDecodeError) as exc:
-            last_error = exc
-            logger.warning("Gemini advice parse failed: %s", exc)
+            logger.warning("Ranvik advice failed: %s", exc)
 
     if settings.groq_api_key:
         try:
@@ -216,9 +280,31 @@ def _llm_json_advice(settings: Settings, system: str, user: str) -> dict[str, st
             return _parse_advice_json(content)
         except (httpx.HTTPError, ValueError, KeyError, json.JSONDecodeError) as exc:
             last_error = exc
-            logger.warning("Groq advice fallback failed: %s", exc)
+            logger.warning("Groq advice failed: %s", exc)
 
-    if geo_blocked:
+    if settings.gemini_api_key and not _gemini_geo_blocked:
+        try:
+            content = _gemini_generate(
+                settings,
+                system=system,
+                user=user,
+                temperature=0.4,
+                json_mode=True,
+                max_output_tokens=2048,
+            )
+            return _parse_advice_json(content)
+        except httpx.HTTPStatusError as exc:
+            last_error = exc
+            if _gemini_failure_kind(exc) == "geo":
+                geo_blocked = True
+            logger.warning("Gemini advice failed: %s", exc)
+        except (GeminiGeoBlockedError, ValueError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if isinstance(exc, GeminiGeoBlockedError):
+                geo_blocked = True
+            logger.warning("Gemini advice parse failed: %s", exc)
+
+    if geo_blocked or _gemini_geo_blocked:
         raise GeminiGeoBlockedError() from last_error
     if last_error is not None:
         raise last_error
@@ -233,8 +319,35 @@ def _llm_chat_reply(
 ) -> str:
     geo_blocked = False
     last_error: Exception | None = None
+    chat_messages = [{"role": "system", "content": system}, *messages]
 
-    if settings.gemini_api_key:
+    if settings.ranvik_api_key:
+        try:
+            return _ranvik_chat(
+                settings,
+                messages=chat_messages,
+                temperature=0.55,
+                json_mode=False,
+                max_tokens=800,
+            )
+        except (httpx.HTTPError, ValueError, KeyError) as exc:
+            last_error = exc
+            logger.warning("Ranvik chat failed: %s", exc)
+
+    if settings.groq_api_key:
+        try:
+            return _groq_chat(
+                settings,
+                messages=chat_messages,
+                temperature=0.55,
+                json_mode=False,
+                max_tokens=600,
+            )
+        except (httpx.HTTPError, ValueError, KeyError) as exc:
+            last_error = exc
+            logger.warning("Groq chat failed: %s", exc)
+
+    if settings.gemini_api_key and not _gemini_geo_blocked:
         history_lines: list[str] = []
         for item in messages:
             role = item.get("role")
@@ -257,24 +370,13 @@ def _llm_chat_reply(
             if _gemini_failure_kind(exc) == "geo":
                 geo_blocked = True
             logger.warning("Gemini chat failed: %s", exc)
-        except ValueError as exc:
+        except (GeminiGeoBlockedError, ValueError) as exc:
             last_error = exc
+            if isinstance(exc, GeminiGeoBlockedError):
+                geo_blocked = True
             logger.warning("Gemini chat failed: %s", exc)
 
-    if settings.groq_api_key:
-        try:
-            return _groq_chat(
-                settings,
-                messages=[{"role": "system", "content": system}, *messages],
-                temperature=0.55,
-                json_mode=False,
-                max_tokens=600,
-            )
-        except (httpx.HTTPError, ValueError, KeyError) as exc:
-            last_error = exc
-            logger.warning("Groq chat fallback failed: %s", exc)
-
-    if geo_blocked:
+    if geo_blocked or _gemini_geo_blocked:
         raise GeminiGeoBlockedError() from last_error
     if last_error is not None:
         raise last_error

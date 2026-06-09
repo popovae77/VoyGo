@@ -9,8 +9,10 @@ import httpx
 
 from app.core.config import get_settings
 from app.models.enums import ComfortLevel, TravelType
+from app.services.daily_costs_catalog import lookup_daily_costs
 from app.services.flight_estimates import base_roundtrip_rub
 from app.services.hotel_price_resolver import HotelPriceResolver
+from app.services.booking_links import build_flight_link, resolve_aviasales_ticket_link
 from app.services.iata_codes import resolve_iata, resolve_origin_iata
 
 
@@ -19,15 +21,19 @@ class PriceQuote:
     flight_per_person: Decimal
     hotel_per_night: Decimal
     daily_food_per_person: Decimal
-    base_local_transport: Decimal
+    daily_transport_per_person: Decimal
     base_activities: Decimal
     source: str = "mock"
     flight_source: str = "mock"
     accommodation_source: str = "mock"
+    food_source: str = "mock"
+    transport_source: str = "mock"
     flight_airline: str | None = None
     flight_booking_url: str | None = None
+    flight_link_is_specific: bool = False
     hotel_name: str | None = None
     hotel_booking_url: str | None = None
+    hotel_link_is_specific: bool = False
 
 
 class PricingProvider(Protocol):
@@ -101,17 +107,22 @@ class MockPricingProvider:
             if self._catalog_hotel_rate(destination, comfort_level) is not None
             else "mock"
         )
+        daily_food, daily_transport, food_source, transport_source = lookup_daily_costs(
+            destination, comfort_level
+        )
+        daily_food = self._money(daily_food * self.discount_factor)
+        daily_transport = self._money(daily_transport * self.discount_factor)
         return PriceQuote(
             flight_per_person=self._money(flight_per_person * self.discount_factor),
             hotel_per_night=hotel_nightly,
-            daily_food_per_person=self._money(
-                Decimal("1600") * destination_factor * comfort_factor * self.discount_factor
-            ),
-            base_local_transport=self._money(Decimal("3200") * destination_factor * self.discount_factor),
+            daily_food_per_person=daily_food,
+            daily_transport_per_person=daily_transport,
             base_activities=self._money(Decimal("5200") * destination_factor * self.discount_factor),
-            source="mock" if accommodation_source == "mock" else "catalog-hotels",
+            source="catalog-daily-costs" if accommodation_source == "mock" else "catalog-hotels+daily-costs",
             flight_source="ориентировочно (оценка по маршруту)",
             accommodation_source=accommodation_source,
+            food_source=food_source,
+            transport_source=transport_source,
         )
 
     @staticmethod
@@ -241,16 +252,19 @@ class TravelpayoutsPricingProvider:
         flight_price: Decimal | None = None
         flight_source = quote.flight_source
         flight_airline: str | None = None
+        flight_ticket_url: str | None = None
+        flight_link_is_specific = False
         destination_iata = resolve_iata(destination)
         origin_iata = resolve_origin_iata(origin)
         if destination_iata and start_date is not None:
-            flight_price, flight_source, flight_airline = self._fetch_flight_price(
+            flight_price, flight_source, flight_airline, flight_ticket_url = self._fetch_flight_price(
                 origin=origin_iata,
                 destination=destination_iata,
                 depart_date=start_date,
                 return_date=end_date,
                 token=token,
             )
+            flight_link_is_specific = flight_ticket_url is not None
 
         if flight_price is None and destination_iata:
             flight_price = self.fallback.estimate_flight_per_person(
@@ -269,12 +283,14 @@ class TravelpayoutsPricingProvider:
             fallback_nightly=quote.hotel_per_night,
             fallback_source=quote.accommodation_source,
         )
+        hotel_link_is_specific = bool(
+            hotel_booking_url
+            and hotel_name
+            and "search.hotellook.com/hotels" not in hotel_booking_url
+        )
 
-        flight_booking_url = None
-        if destination_iata and start_date and end_date:
-            from app.services.booking_links import build_flight_link
-
-            flight_booking_url = build_flight_link(
+        flight_booking_url = flight_ticket_url or (
+            build_flight_link(
                 destination,
                 start_date,
                 end_date,
@@ -282,6 +298,9 @@ class TravelpayoutsPricingProvider:
                 origin_iata=origin_iata,
                 airline=flight_airline,
             )
+            if destination_iata and start_date and end_date
+            else None
+        )
 
         parts = []
         if flight_price is not None:
@@ -302,15 +321,19 @@ class TravelpayoutsPricingProvider:
             flight_per_person=flight_price if flight_price is not None else quote.flight_per_person,
             hotel_per_night=hotel_per_night,
             daily_food_per_person=quote.daily_food_per_person,
-            base_local_transport=quote.base_local_transport,
+            daily_transport_per_person=quote.daily_transport_per_person,
             base_activities=quote.base_activities,
             source=combined_source,
             flight_source=flight_source,
             accommodation_source=accommodation_source,
+            food_source=quote.food_source,
+            transport_source=quote.transport_source,
             flight_airline=flight_airline,
             flight_booking_url=flight_booking_url,
+            flight_link_is_specific=flight_link_is_specific,
             hotel_name=hotel_name,
             hotel_booking_url=hotel_booking_url,
+            hotel_link_is_specific=hotel_link_is_specific,
         )
 
     def _resolve_hotel_rate(
@@ -348,9 +371,10 @@ class TravelpayoutsPricingProvider:
         depart_date: date,
         return_date: date | None,
         token: str,
-    ) -> tuple[Decimal | None, str, str | None]:
+    ) -> tuple[Decimal | None, str, str | None, str | None]:
+        settings = get_settings()
         for depart_key, return_key in self._flight_date_attempts(depart_date, return_date):
-            exact, airline = self._fetch_cheap_price(
+            exact, airline, ticket_link = self._fetch_cheap_price(
                 origin,
                 destination,
                 depart_key,
@@ -358,14 +382,15 @@ class TravelpayoutsPricingProvider:
                 token,
             )
             if exact is not None:
-                return exact, "Travelpayouts / Aviasales cache", airline
+                ticket_url = resolve_aviasales_ticket_link(ticket_link, settings.travelpayouts_marker)
+                return exact, "Travelpayouts / Aviasales cache", airline, ticket_url
 
         if return_date is not None and return_date > depart_date:
             matrix = self._fetch_matrix_roundtrip(origin, destination, depart_date, return_date, token)
             if matrix is not None:
-                return matrix, "Travelpayouts / Aviasales (кэш, ближайшие даты)", None
+                return matrix, "Travelpayouts / Aviasales (кэш, ближайшие даты)", None, None
 
-        return None, "mock", None
+        return None, "mock", None, None
 
     @staticmethod
     def _flight_date_attempts(
@@ -388,7 +413,7 @@ class TravelpayoutsPricingProvider:
         depart_date: str,
         return_date: str | None,
         token: str,
-    ) -> tuple[Decimal | None, str | None]:
+    ) -> tuple[Decimal | None, str | None, str | None]:
         params: dict[str, str] = {
             "origin": origin,
             "destination": destination,
@@ -404,17 +429,18 @@ class TravelpayoutsPricingProvider:
                 "https://api.travelpayouts.com/v1/prices/cheap",
                 params=params,
                 headers=headers,
-                timeout=12.0,
+                timeout=8.0,
             )
             response.raise_for_status()
             payload = response.json()
         except (httpx.HTTPError, ValueError):
-            return None, None
+            return None, None, None
 
         data = payload.get("data", {})
         destination_data = data.get(destination, {}) if isinstance(data, dict) else {}
         best_price: Decimal | None = None
         best_airline: str | None = None
+        best_link: str | None = None
         if isinstance(destination_data, dict):
             for item in destination_data.values():
                 if not isinstance(item, dict) or not item.get("price"):
@@ -423,9 +449,11 @@ class TravelpayoutsPricingProvider:
                 if best_price is None or price < best_price:
                     best_price = price
                     best_airline = item.get("airline")
+                    raw_link = item.get("link")
+                    best_link = str(raw_link) if raw_link else None
         if best_price is None:
-            return None, None
-        return best_price, str(best_airline) if best_airline else None
+            return None, None, None
+        return best_price, str(best_airline) if best_airline else None, best_link
 
     def _fetch_matrix_roundtrip(
         self,
@@ -460,7 +488,7 @@ class TravelpayoutsPricingProvider:
                     "token": token,
                     "limit": 100,
                 },
-                timeout=8,
+                timeout=5,
             )
             response.raise_for_status()
             rows = response.json().get("data", [])
@@ -543,6 +571,46 @@ def integration_status() -> list[dict[str, str | bool]]:
             "type": "hotels",
             "enabled": has_catalog,
             "status": f"fallback, направлений: {len(HOTEL_CATALOG_RATES)}",
+        },
+        {
+            "code": "daily-costs-catalog",
+            "title": "Каталог питания и транспорта (Numbeo + Росстат, 2026)",
+            "type": "daily_costs",
+            "enabled": True,
+            "status": "дневные траты по направлению и уровню комфорта",
+        },
+        {
+            "code": "ranvik-ai",
+            "title": "Ranvik AI (DeepSeek)",
+            "type": "ai",
+            "enabled": bool(settings.ranvik_api_key),
+            "status": (
+                f"работает — {settings.ranvik_model}"
+                if settings.ranvik_api_key
+                else "нужен RANVIK_API_KEY — api.ranvik.ru"
+            ),
+        },
+        {
+            "code": "groq-ai",
+            "title": "Groq AI (чат и советы)",
+            "type": "ai",
+            "enabled": bool(settings.groq_api_key),
+            "status": (
+                "работает — Llama 3.3"
+                if settings.groq_api_key
+                else "нужен GROQ_API_KEY — console.groq.com (бесплатно, работает в РФ)"
+            ),
+        },
+        {
+            "code": "gemini-ai",
+            "title": "Google Gemini",
+            "type": "ai",
+            "enabled": bool(settings.gemini_api_key),
+            "status": (
+                "ключ задан (может быть недоступен в РФ — используйте Groq)"
+                if settings.gemini_api_key
+                else "нужен GEMINI_API_KEY"
+            ),
         },
         {
             "code": "booking",

@@ -17,7 +17,7 @@ class HotelPriceResolver:
         settings = get_settings()
         self._serpapi: SerpApiHotelsClient | None = None
         if settings.serpapi_api_key:
-            self._serpapi = SerpApiHotelsClient(settings.serpapi_api_key)
+            self._serpapi = SerpApiHotelsClient(settings.serpapi_api_key, timeout=10.0)
 
         self._makcorps: MakcorpsClient | None = None
         if settings.makcorps_jwt or (settings.makcorps_username and settings.makcorps_password):

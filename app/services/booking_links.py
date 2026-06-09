@@ -10,12 +10,29 @@ from app.services.iata_codes import resolve_iata
 from app.services.serpapi_hotels_client import CITY_QUERY
 
 AVIASALES_SEARCH = "https://www.aviasales.ru/search"
+AVIASALES_BASE = "https://www.aviasales.ru"
 HOTELLOOK_SEARCH = "https://search.hotellook.com/hotels"
 GOOGLE_HOTELS_SEARCH = "https://www.google.com/travel/search"
 
 
 def _segment(iata: str, when: date) -> str:
     return f"{iata.upper()}{when.day:02d}{when.month:02d}"
+
+
+def resolve_aviasales_ticket_link(link: str | None, marker: str | None = None) -> str | None:
+    """Turn Travelpayouts `link` field into a full Aviasales URL for a concrete fare."""
+    if not link:
+        return None
+    raw = link.strip()
+    if not raw:
+        return None
+    if raw.startswith("http"):
+        url = raw
+    else:
+        url = AVIASALES_BASE + (raw if raw.startswith("/") else f"/{raw}")
+    if marker and "marker=" not in url:
+        url += ("&" if "?" in url else "?") + urlencode({"marker": marker})
+    return url
 
 
 def build_flight_link(
@@ -126,9 +143,12 @@ def build_booking_links(
     origin_iata: str | None = None,
     flight_airline: str | None = None,
     flight_booking_url: str | None = None,
+    flight_link_is_specific: bool = False,
     hotel_name: str | None = None,
     hotel_booking_url: str | None = None,
+    hotel_link_is_specific: bool = False,
 ) -> dict[str, str | None]:
+    city = CITY_QUERY.get(destination.strip().lower()) or destination.strip()
     hotels = build_hotel_links(
         destination,
         start_date,
@@ -137,13 +157,21 @@ def build_booking_links(
         hotel_name=hotel_name,
         property_url=hotel_booking_url,
     )
-    hotels["flight_aviasales"] = build_flight_link(
+    generic_flight = build_flight_link(
         destination,
         start_date,
         end_date,
         people_count,
         origin_iata=origin_iata,
         airline=flight_airline,
-        override_url=flight_booking_url,
     )
+    flight_url = flight_booking_url or generic_flight
+    hotels["flight_aviasales"] = flight_url
+    hotels["flight_specific"] = flight_link_is_specific or (
+        bool(flight_booking_url) and flight_booking_url != generic_flight
+    )
+    hotels["hotel_specific"] = hotel_link_is_specific or bool(
+        hotel_booking_url and hotel_name and "search.hotellook.com" not in (hotel_booking_url or "")
+    )
+    hotels["hotel_city"] = city
     return hotels

@@ -1,3 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
@@ -13,6 +16,22 @@ from app.services.budget_calculator import BudgetCalculatorService, TRAVEL_TYPE_
 
 
 router = APIRouter(prefix="/trips", tags=["Trips & Budget"])
+logger = logging.getLogger(__name__)
+AI_ADVICE_TIMEOUT_SEC = 10
+
+
+def _safe_ai_advice(trip: TripSearchCreate, offers: list[dict]) -> dict:
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(get_ai_travel_advice, trip, offers)
+        try:
+            return future.result(timeout=AI_ADVICE_TIMEOUT_SEC)
+        except FuturesTimeoutError:
+            logger.warning("AI advice timed out after %ss", AI_ADVICE_TIMEOUT_SEC)
+            return {
+                "summary": "Расчёт готов. Совет ИИ можно получить в чате справа внизу.",
+                "tips": [],
+                "best_pick": "",
+            }
 
 
 @router.post("/search", response_model=TripSearchResponse, status_code=status.HTTP_201_CREATED)
@@ -21,8 +40,9 @@ def search_trips(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> TripSearchResponse:
+    user_id = current_user.id
     trip_request = TripRequest(
-        user_id=current_user.id,
+        user_id=user_id,
         origin=payload.origin.strip(),
         destination=payload.destination.strip(),
         start_date=payload.start_date,
@@ -56,7 +76,7 @@ def search_trips(
     for offer in offers:
         db.refresh(offer)
 
-    trip_request = _get_user_request(db, current_user.id, trip_request.id)
+    trip_request = _get_user_request(db, user_id, trip_request.id)
     offers_payload = [
         {
             "title": o.title,
@@ -66,7 +86,7 @@ def search_trips(
         }
         for o in trip_request.offers
     ]
-    ai_raw = get_ai_travel_advice(payload, offers_payload)
+    ai_raw = _safe_ai_advice(payload, offers_payload)
     return TripSearchResponse(
         request=trip_request,
         offers=trip_request.offers,
@@ -105,7 +125,8 @@ def recalculate_request(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> TripSearchResponse:
-    trip_request = _get_user_request(db, current_user.id, request_id)
+    user_id = current_user.id
+    trip_request = _get_user_request(db, user_id, request_id)
     payload = TripSearchCreate(
         origin=getattr(trip_request, "origin", None) or "Москва",
         destination=trip_request.destination,
@@ -138,7 +159,7 @@ def recalculate_request(
     for offer in offers:
         db.refresh(offer)
 
-    trip_request = _get_user_request(db, current_user.id, request_id)
+    trip_request = _get_user_request(db, user_id, request_id)
     return TripSearchResponse(request=trip_request, offers=trip_request.offers)
 
 

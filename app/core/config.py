@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-flash-latest"
     groq_api_key: str | None = None
     groq_model: str = "llama-3.3-70b-versatile"
+    ranvik_api_key: str | None = None
+    ranvik_model: str = "deepseek-v4-flash"
+    ranvik_api_url: str = "https://api.ranvik.ru/v1/chat/completions"
     app_name: str = "Voyago"
     api_v1_prefix: str = "/api/v1"
     reserve_percent: int = Field(default=10, ge=0, le=50)

@@ -1,0 +1,182 @@
+{
+  "_meta": {
+    "year": 2026,
+    "updated": "2026-05-01",
+    "methodology": "Средние дневные траты туриста: 2–3 приёма пищи вне дома + местный транспорт и такси. База Numbeo Q1 2025, индекс Росстат на общепит (2025), коррекция +5% на 2026.",
+    "sources": [
+      "Numbeo — Restaurant Prices, Transportation (numbeo.com/cost-of-living), обновление 2025",
+      "Росстат — индекс потребительских цен: услуги общественного питания, 2025",
+      "Numbeo — Meal for 2 People, Mid-range Restaurant, Three-course (по городам)"
+    ]
+  },
+  "defaults": {
+    "food_rub_per_day": {"economy": 2400, "standard": 3400, "comfort": 5200},
+    "transport_rub_per_person_per_day": {"economy": 550, "standard": 950, "comfort": 1900},
+    "source_food": "Numbeo + Росстат, средний регион РФ, 2026",
+    "source_transport": "Numbeo (Local Transport + Taxi), средний регион РФ, 2026"
+  },
+  "cities": {
+    "москва": {
+      "food_rub_per_day": {"economy": 2600, "standard": 3800, "comfort": 5800},
+      "transport_rub_per_person_per_day": {"economy": 450, "standard": 750, "comfort": 1600},
+      "source_food": "Numbeo Moscow, Restaurant Prices, 2025 → 2026",
+      "source_transport": "Numbeo Moscow, Local Transport + Taxi, 2025 → 2026"
+    },
+    "сочи": {
+      "food_rub_per_day": {"economy": 2500, "standard": 3600, "comfort": 5500},
+      "transport_rub_per_person_per_day": {"economy": 500, "standard": 850, "comfort": 1700},
+      "source_food": "Numbeo Sochi + сезонный курортный коэффициент, 2026",
+      "source_transport": "Numbeo Sochi, Local Transport + Taxi, 2026"
+    },
+    "санкт-петербург": {
+      "food_rub_per_day": {"economy": 2500, "standard": 3600, "comfort": 5500},
+      "transport_rub_per_person_per_day": {"economy": 450, "standard": 780, "comfort": 1650},
+      "source_food": "Numbeo Saint Petersburg, 2025 → 2026",
+      "source_transport": "Numbeo Saint Petersburg, 2025 → 2026"
+    },
+    "казань": {
+      "food_rub_per_day": {"economy": 2100, "standard": 3000, "comfort": 4600},
+      "transport_rub_per_person_per_day": {"economy": 400, "standard": 700, "comfort": 1400},
+      "source_food": "Numbeo Kazan, 2025 → 2026",
+      "source_transport": "Numbeo Kazan, 2025 → 2026"
+    },
+    "стамбул": {
+      "food_rub_per_day": {"economy": 2200, "standard": 3400, "comfort": 5200},
+      "transport_rub_per_person_per_day": {"economy": 480, "standard": 900, "comfort": 1800},
+      "source_food": "Numbeo Istanbul, Meal prices (TRY→RUB), 2025 → 2026",
+      "source_transport": "Numbeo Istanbul, 2025 → 2026"
+    },
+    "анталия": {
+      "food_rub_per_day": {"economy": 2200, "standard": 3300, "comfort": 5000},
+      "transport_rub_per_person_per_day": {"economy": 450, "standard": 850, "comfort": 1650},
+      "source_food": "Numbeo Antalya, 2025 → 2026",
+      "source_transport": "Numbeo Antalya, 2025 → 2026"
+    },
+    "аланья": {
+      "food_rub_per_day": {"economy": 2100, "standard": 3200, "comfort": 4800},
+      "transport_rub_per_person_per_day": {"economy": 420, "standard": 800, "comfort": 1550},
+      "source_food": "Numbeo Alanya, 2025 → 2026",
+      "source_transport": "Numbeo Alanya, 2025 → 2026"
+    },
+    "дубай": {
+      "food_rub_per_day": {"economy": 4200, "standard": 7200, "comfort": 11500},
+      "transport_rub_per_person_per_day": {"economy": 900, "standard": 1900, "comfort": 3800},
+      "source_food": "Numbeo Dubai, 2025 → 2026",
+      "source_transport": "Numbeo Dubai (Taxi + Metro), 2025 → 2026"
+    },
+    "париж": {
+      "food_rub_per_day": {"economy": 3800, "standard": 6200, "comfort": 9800},
+      "transport_rub_per_person_per_day": {"economy": 650, "standard": 1400, "comfort": 2800},
+      "source_food": "Numbeo Paris, 2025 → 2026",
+      "source_transport": "Numbeo Paris (RATP + Taxi), 2025 → 2026"
+    },
+    "барселона": {
+      "food_rub_per_day": {"economy": 3400, "standard": 5600, "comfort": 8800},
+      "transport_rub_per_person_per_day": {"economy": 600, "standard": 1250, "comfort": 2500},
+      "source_food": "Numbeo Barcelona, 2025 → 2026",
+      "source_transport": "Numbeo Barcelona, 2025 → 2026"
+    },
+    "мадрид": {
+      "food_rub_per_day": {"economy": 3200, "standard": 5200, "comfort": 8200},
+      "transport_rub_per_person_per_day": {"economy": 580, "standard": 1200, "comfort": 2400},
+      "source_food": "Numbeo Madrid, 2025 → 2026",
+      "source_transport": "Numbeo Madrid, 2025 → 2026"
+    },
+    "испания": {
+      "food_rub_per_day": {"economy": 3200, "standard": 5200, "comfort": 8200},
+      "transport_rub_per_person_per_day": {"economy": 580, "standard": 1200, "comfort": 2400},
+      "source_food": "Numbeo Spain (среднее по крупным городам), 2026",
+      "source_transport": "Numbeo Spain, 2026"
+    },
+    "рим": {
+      "food_rub_per_day": {"economy": 3500, "standard": 5800, "comfort": 9200},
+      "transport_rub_per_person_per_day": {"economy": 620, "standard": 1300, "comfort": 2600},
+      "source_food": "Numbeo Rome, 2025 → 2026",
+      "source_transport": "Numbeo Rome, 2025 → 2026"
+    },
+    "италия": {
+      "food_rub_per_day": {"economy": 3500, "standard": 5800, "comfort": 9200},
+      "transport_rub_per_person_per_day": {"economy": 620, "standard": 1300, "comfort": 2600},
+      "source_food": "Numbeo Italy (среднее), 2026",
+      "source_transport": "Numbeo Italy, 2026"
+    },
+    "пхукет": {
+      "food_rub_per_day": {"economy": 1800, "standard": 2900, "comfort": 4600},
+      "transport_rub_per_person_per_day": {"economy": 380, "standard": 750, "comfort": 1500},
+      "source_food": "Numbeo Phuket, 2025 → 2026",
+      "source_transport": "Numbeo Phuket, 2025 → 2026"
+    },
+    "таиланд": {
+      "food_rub_per_day": {"economy": 1700, "standard": 2800, "comfort": 4400},
+      "transport_rub_per_person_per_day": {"economy": 350, "standard": 700, "comfort": 1400},
+      "source_food": "Numbeo Thailand (Bangkok/Phuket), 2026",
+      "source_transport": "Numbeo Thailand, 2026"
+    },
+    "бали": {
+      "food_rub_per_day": {"economy": 1600, "standard": 2700, "comfort": 4300},
+      "transport_rub_per_person_per_day": {"economy": 350, "standard": 700, "comfort": 1400},
+      "source_food": "Numbeo Bali (Denpasar), 2025 → 2026",
+      "source_transport": "Numbeo Bali, 2025 → 2026"
+    },
+    "египет": {
+      "food_rub_per_day": {"economy": 1500, "standard": 2500, "comfort": 4000},
+      "transport_rub_per_person_per_day": {"economy": 320, "standard": 650, "comfort": 1300},
+      "source_food": "Numbeo Egypt (Cairo/Hurghada), 2026",
+      "source_transport": "Numbeo Egypt, 2026"
+    },
+    "сингапур": {
+      "food_rub_per_day": {"economy": 2800, "standard": 4500, "comfort": 7200},
+      "transport_rub_per_person_per_day": {"economy": 500, "standard": 950, "comfort": 1900},
+      "source_food": "Numbeo Singapore, 2025 → 2026",
+      "source_transport": "Numbeo Singapore, 2025 → 2026"
+    },
+    "токио": {
+      "food_rub_per_day": {"economy": 3200, "standard": 5200, "comfort": 8500},
+      "transport_rub_per_person_per_day": {"economy": 600, "standard": 1200, "comfort": 2400},
+      "source_food": "Numbeo Tokyo, 2025 → 2026",
+      "source_transport": "Numbeo Tokyo, 2025 → 2026"
+    },
+    "япония": {
+      "food_rub_per_day": {"economy": 3200, "standard": 5200, "comfort": 8500},
+      "transport_rub_per_person_per_day": {"economy": 600, "standard": 1200, "comfort": 2400},
+      "source_food": "Numbeo Japan (Tokyo/Osaka), 2026",
+      "source_transport": "Numbeo Japan, 2026"
+    },
+    "вьетнам": {
+      "food_rub_per_day": {"economy": 1200, "standard": 2200, "comfort": 3600},
+      "transport_rub_per_person_per_day": {"economy": 250, "standard": 500, "comfort": 1000},
+      "source_food": "Numbeo Vietnam (Ho Chi Minh / Nha Trang), 2026",
+      "source_transport": "Numbeo Vietnam, 2026"
+    },
+    "малайзия": {
+      "food_rub_per_day": {"economy": 1500, "standard": 2600, "comfort": 4200},
+      "transport_rub_per_person_per_day": {"economy": 320, "standard": 650, "comfort": 1300},
+      "source_food": "Numbeo Malaysia (Kuala Lumpur), 2026",
+      "source_transport": "Numbeo Malaysia, 2026"
+    },
+    "хорватия": {
+      "food_rub_per_day": {"economy": 2800, "standard": 4400, "comfort": 7000},
+      "transport_rub_per_person_per_day": {"economy": 500, "standard": 950, "comfort": 1900},
+      "source_food": "Numbeo Croatia (Split/Dubrovnik), 2026",
+      "source_transport": "Numbeo Croatia, 2026"
+    },
+    "занзибар": {
+      "food_rub_per_day": {"economy": 1800, "standard": 3000, "comfort": 4800},
+      "transport_rub_per_person_per_day": {"economy": 400, "standard": 800, "comfort": 1600},
+      "source_food": "Numbeo Tanzania (Zanzibar), 2026",
+      "source_transport": "Numbeo Tanzania, 2026"
+    },
+    "куба": {
+      "food_rub_per_day": {"economy": 2000, "standard": 3200, "comfort": 5000},
+      "transport_rub_per_person_per_day": {"economy": 450, "standard": 850, "comfort": 1700},
+      "source_food": "Numbeo Cuba (Havana), 2026",
+      "source_transport": "Numbeo Cuba, 2026"
+    },
+    "доминикана": {
+      "food_rub_per_day": {"economy": 2200, "standard": 3500, "comfort": 5500},
+      "transport_rub_per_person_per_day": {"economy": 480, "standard": 900, "comfort": 1800},
+      "source_food": "Numbeo Dominican Republic (Punta Cana), 2026",
+      "source_transport": "Numbeo Dominican Republic, 2026"
+    }
+  }
+}

@@ -1285,6 +1285,13 @@
       document.getElementById("authButton").textContent = mode === "register" ? "Зарегистрироваться" : "Войти";
     }
 
+    function displayFirstName(fullName) {
+      if (!fullName) return "";
+      const parts = fullName.trim().split(/\s+/).filter(Boolean);
+      if (parts.length >= 3) return parts[1];
+      return parts[0];
+    }
+
     function logout() {
       token = "";
       currentUser = null;
@@ -1300,10 +1307,10 @@
         area.innerHTML = `<button type="button" onclick="openAuth()">Войти</button>`;
         return;
       }
-      const name = currentUser.full_name || currentUser.email.split("@")[0];
+      const name = displayFirstName(currentUser.full_name) || currentUser.email.split("@")[0];
       area.innerHTML = `
-        <div class="avatar">${name.slice(0, 1).toUpperCase()}</div>
-        <button class="secondary" type="button" onclick="loadProfile()">${name}</button>
+        <img class="avatar" src="/static/img/avatar-cat.png" alt="" width="36" height="36">
+        <button class="secondary" type="button" onclick="loadProfile()">${escapeHtml(name)}</button>
         <button class="ghost" type="button" onclick="logout()" title="Выйти"><span data-icon="logout"></span></button>
       `;
       hydrateIcons();
@@ -1834,10 +1841,10 @@
       container.innerHTML = `<div class="loader active"><span class="spinner"></span>Загружаем профиль...</div>`;
       try {
         const items = await request("/trips/requests");
-        const name = currentUser?.full_name || currentUser?.email || "Пользователь";
+        const name = displayFirstName(currentUser?.full_name) || currentUser?.email?.split("@")[0] || "Пользователь";
         container.innerHTML = `
           <div class="compact-item">
-            <h3>${name}</h3>
+            <h3>${escapeHtml(name)}</h3>
             <span class="muted">Валюта: ${currentUser?.currency || "RUB"}</span>
           </div>
           ${items.length ? items.map(item => `

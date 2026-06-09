@@ -71,7 +71,9 @@ class BudgetCalculatorService:
         flight = quote.flight_per_person * trip.people_count
         hotel = quote.hotel_per_night * days
         food = quote.daily_food_per_person * days * trip.people_count * coeff.food_coeff
-        local_transport = quote.base_local_transport * coeff.transport_coeff
+        local_transport = (
+            quote.daily_transport_per_person * days * trip.people_count * coeff.transport_coeff
+        )
         activities = quote.base_activities * coeff.activities_coeff * trip.people_count
         insurance = (flight + hotel) * Decimal("0.03")
         subtotal = flight + hotel + food + local_transport + activities + insurance
@@ -130,8 +132,10 @@ class BudgetCalculatorService:
                 origin_iata=resolve_origin_iata(trip.origin),
                 flight_airline=quote.flight_airline,
                 flight_booking_url=quote.flight_booking_url,
+                flight_link_is_specific=quote.flight_link_is_specific,
                 hotel_name=quote.hotel_name,
                 hotel_booking_url=quote.hotel_booking_url,
+                hotel_link_is_specific=quote.hotel_link_is_specific,
             ),
         )
 
@@ -229,7 +233,8 @@ def build_calculation_details(
             "title": "Питание",
             "total": str(amounts["food"]),
             "lines": [
-                f"База: {_fmt(quote.daily_food_per_person)} ₽ / чел. / день (регион и комфорт)",
+                f"Источник: {quote.food_source}",
+                f"База: {_fmt(quote.daily_food_per_person)} ₽ / чел. / день",
                 f"Коэффициент типа отдыха «{travel_title}»: ×{coeff.food_coeff}",
                 f"Дней: {days}, людей: {trip.people_count}",
                 (
@@ -242,10 +247,15 @@ def build_calculation_details(
             "title": "Транспорт на месте",
             "total": str(amounts["local_transport"]),
             "lines": [
-                f"База по направлению: {_fmt(quote.base_local_transport)} ₽",
+                f"Источник: {quote.transport_source}",
+                f"База: {_fmt(quote.daily_transport_per_person)} ₽ / чел. / день",
                 f"Коэффициент «{travel_title}»: ×{coeff.transport_coeff}",
-                f"Расчёт: {_fmt(quote.base_local_transport)} × {coeff.transport_coeff} = {_fmt(amounts['local_transport'])} ₽",
-                "Включает такси, метро, трансферы внутри города (ориентир).",
+                f"Дней: {days}, людей: {trip.people_count}",
+                (
+                    f"Расчёт: {_fmt(quote.daily_transport_per_person)} × {days} × {trip.people_count} "
+                    f"× {coeff.transport_coeff} = {_fmt(amounts['local_transport'])} ₽"
+                ),
+                "Метро, автобус, такси и трансферы внутри города.",
             ],
         },
         "activities": {

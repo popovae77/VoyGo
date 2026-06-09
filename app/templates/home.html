@@ -200,11 +200,10 @@
       width: 36px;
       height: 36px;
       border-radius: 0;
-      display: grid;
-      place-items: center;
-      background: var(--ink);
-      color: #fff;
-      font-weight: 900;
+      border: none;
+      display: block;
+      object-fit: cover;
+      background: transparent;
     }
 
     .page {
@@ -214,14 +213,15 @@
 
     .hero {
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(330px, .95fr);
-      gap: 24px;
-      align-items: start;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      align-items: stretch;
       margin-bottom: 24px;
     }
 
     .hero-copy {
-      min-height: 390px;
+      min-height: 100%;
+      height: 100%;
       border-radius: var(--radius);
       overflow: hidden;
       padding: 32px;
@@ -410,8 +410,12 @@
     }
 
     .nights-badge {
+      height: 48px;
       min-height: 48px;
+      max-height: 48px;
       padding: 0 14px;
+      box-sizing: border-box;
+      align-self: end;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1006,7 +1010,7 @@
       nav { justify-content: start; overflow-x: auto; padding-bottom: 2px; }
       .account { justify-content: start; }
       .hero { grid-template-columns: 1fr; }
-      .hero-copy { min-height: 310px; }
+      .hero-copy { min-height: 280px; height: auto; }
       .summary { grid-template-columns: 1fr; }
     }
 
@@ -1061,13 +1065,13 @@
       <div class="hero">
         <div class="hero-copy">
           <h1>Travel<br>Under<br>Budget</h1>
-          <p class="lead">Редакционный подбор поездок: направление, реальные цены, честная смета — без визуального шума.</p>
+          <p class="lead">Современный подбор поездок в одном месте: направление, реальные цены— без визуального шума.</p>
         </div>
 
         <aside class="panel search-panel">
           <div class="search-panel-head">
             <h2>Новый маршрут</h2>
-            <p class="fineprint">Заполните поля — система соберёт поездку как в журнале: структурно и прозрачно.</p>
+            <p class="fineprint">Расскажите о своих препочтениях- а мы подберем лучшие варианты</p>
           </div>
 
           <form id="tripForm" class="form-grid" autocomplete="off">
@@ -1183,7 +1187,7 @@
           <ul id="aiTips"></ul>
         </div>
 
-        <div id="loader" class="loader"><span class="spinner"></span>Считаем бюджет, ИИ анализирует варианты...</div>
+        <div id="loader" class="loader"><span class="spinner"></span><span id="loaderText">Считаем бюджет…</span></div>
         <div id="results" class="results">
           <div class="empty">Пока нет результатов. Нажмите «Подобрать поездку».</div>
         </div>
@@ -1302,11 +1306,14 @@
         ? `Забронировать: ${escapeHtml(links.hotel_name)}`
         : "Забронировать отель";
       if (links.flight_aviasales) {
-        parts.push(`<a class="btn-booking" href="${escapeHtml(links.flight_aviasales)}" target="_blank" rel="noopener noreferrer">✈️ Купить этот перелёт</a>`);
+        parts.push(`<a class="btn-booking" href="${escapeHtml(links.flight_aviasales)}" target="_blank" rel="noopener noreferrer">${links.flight_specific ? "✈️ Этот билет на Aviasales" : "✈️ Найти перелёт на Aviasales"}</a>`);
       }
       const hotelUrl = links.hotel_primary || links.hotel_hotellook;
       if (hotelUrl) {
-        parts.push(`<a class="btn-booking" href="${escapeHtml(hotelUrl)}" target="_blank" rel="noopener noreferrer">🏨 ${hotelLabel}</a>`);
+        const hotelBtn = links.hotel_specific
+          ? `🏨 ${hotelLabel}`
+          : `🏨 Найти отель: ${links.hotel_name ? escapeHtml(links.hotel_name) : escapeHtml(links.hotel_city || "направление")}`;
+        parts.push(`<a class="btn-booking" href="${escapeHtml(hotelUrl)}" target="_blank" rel="noopener noreferrer">${hotelBtn}</a>`);
       }
       if (links.hotel_google && links.hotel_google !== hotelUrl) {
         parts.push(`<a class="secondary" href="${escapeHtml(links.hotel_google)}" target="_blank" rel="noopener noreferrer">Сравнить на Google</a>`);
@@ -1362,20 +1369,61 @@
     }
 
     async function request(path, options = {}) {
-      const response = await fetch(`${api}${path}`, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(),
-          ...(options.headers || {})
+      const timeoutMs = options.timeoutMs ?? 90000;
+      const { timeoutMs: _ignored, ...fetchOptions } = options;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(`${api}${path}`, {
+          ...fetchOptions,
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+            ...(options.headers || {})
+          }
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ detail: "Ошибка запроса" }));
+          const detail = error.detail;
+          let message = "Ошибка запроса";
+          if (typeof detail === "string" && detail) {
+            message = detail;
+          } else if (Array.isArray(detail)) {
+            message = detail.map(item => item.msg || item.message || JSON.stringify(item)).join("; ");
+          } else if (response.status === 401) {
+            message = "Сессия истекла — войдите снова";
+          } else if (response.status >= 500) {
+            message = "Ошибка сервера. Подождите секунду и попробуйте снова.";
+          }
+          throw new Error(message);
         }
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: "Ошибка запроса" }));
-        throw new Error(error.detail || "Ошибка запроса");
+        if (response.status === 204) return null;
+        return response.json();
+      } catch (error) {
+        if (error.name === "AbortError") {
+          throw new Error("Слишком долго ждём ответ. Попробуйте ещё раз через минуту.");
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
       }
-      if (response.status === 204) return null;
-      return response.json();
+    }
+
+    function startSearchLoader(textEl) {
+      const steps = [
+        "Запрашиваем цены на авиабилеты…",
+        "Ищем отели по вашим датам…",
+        "Считаем бюджет поездки…",
+        "ИИ анализирует варианты…",
+        "Почти готово, ещё немного…"
+      ];
+      let step = 0;
+      textEl.textContent = steps[0];
+      return setInterval(() => {
+        step = Math.min(step + 1, steps.length - 1);
+        textEl.textContent = steps[step];
+      }, 6000);
     }
 
     function setActiveNav(id) {
@@ -1484,6 +1532,13 @@
       return false;
     }
 
+    function displayFirstName(fullName) {
+      if (!fullName) return "";
+      const parts = fullName.trim().split(/\s+/).filter(Boolean);
+      if (parts.length >= 3) return parts[1];
+      return parts[0];
+    }
+
     function logout() {
       token = "";
       currentUser = null;
@@ -1499,10 +1554,10 @@
         area.innerHTML = `<a class="secondary" href="/auth" style="display:inline-flex;align-items:center;padding:10px 14px;border-radius:0;text-decoration:none;font-weight:800;border:1px solid var(--line);color:var(--ink)">Войти</a>`;
         return;
       }
-      const name = currentUser.full_name || currentUser.email.split("@")[0];
+      const name = displayFirstName(currentUser.full_name) || currentUser.email.split("@")[0];
       area.innerHTML = `
-        <div class="avatar">${name.slice(0, 1).toUpperCase()}</div>
-        <button class="secondary" type="button" onclick="loadProfile()">${name}</button>
+        <img class="avatar" src="/static/img/avatar-cat.png" alt="" width="36" height="36">
+        <button class="secondary" type="button" onclick="loadProfile()">${escapeHtml(name)}</button>
         <button class="ghost" type="button" onclick="logout()" title="Выйти"><span data-icon="logout"></span></button>
       `;
       hydrateIcons();
@@ -1791,6 +1846,8 @@
       const flights = items.find(item => item.code === "travelpayouts");
       const serpapi = items.find(item => item.code === "serpapi-hotels");
       const makcorps = items.find(item => item.code === "makcorps-hotels");
+      const ranvik = items.find(item => item.code === "ranvik-ai");
+      const groq = items.find(item => item.code === "groq-ai");
       const bar = document.getElementById("integrationBar");
 
       const flightCls = flights?.enabled ? "ok" : "info";
@@ -1808,7 +1865,15 @@
         hotelText = "Жильё: Makcorps (Booking, Priceline…)";
       }
 
-      bar.innerHTML = `<span class="chip ${flightCls}">${flightText}</span><span class="chip ${hotelCls}">${hotelText}</span>`;
+      const aiCls = (ranvik?.enabled || groq?.enabled) ? "ok" : "warn";
+      let aiText = "ИИ: нужен RANVIK_API_KEY или GROQ_API_KEY";
+      if (ranvik?.enabled) {
+        aiText = "ИИ: Ranvik (DeepSeek)";
+      } else if (groq?.enabled) {
+        aiText = "ИИ: Groq";
+      }
+
+      bar.innerHTML = `<span class="chip ${flightCls}">${flightText}</span><span class="chip ${hotelCls}">${hotelText}</span><span class="chip ${aiCls}">${aiText}</span>`;
     }
 
     document.getElementById("tripForm").addEventListener("submit", async (event) => {
@@ -1817,15 +1882,17 @@
 
       const button = document.getElementById("searchButton");
       const loader = document.getElementById("loader");
+      const loaderText = document.getElementById("loaderText");
       const results = document.getElementById("results");
       button.disabled = true;
       loader.classList.add("active");
       results.innerHTML = "";
+      const loaderTimer = startSearchLoader(loaderText);
 
       try {
-        await new Promise(resolve => setTimeout(resolve, 550));
         const data = await request("/trips/search", {
           method: "POST",
+          timeoutMs: 90000,
           body: JSON.stringify({
             origin: document.getElementById("origin").value,
             destination: document.getElementById("destination").value,
@@ -1846,8 +1913,10 @@
       } catch (error) {
         results.innerHTML = `<div class="empty">Не удалось выполнить поиск. ${error.message}</div>`;
       } finally {
+        clearInterval(loaderTimer);
         button.disabled = false;
         loader.classList.remove("active");
+        loaderText.textContent = "Считаем бюджет…";
       }
     });
 
@@ -2067,10 +2136,10 @@
       container.innerHTML = `<div class="loader active"><span class="spinner"></span>Загружаем профиль...</div>`;
       try {
         const items = await request("/trips/requests");
-        const name = currentUser?.full_name || currentUser?.email || "Пользователь";
+        const name = displayFirstName(currentUser?.full_name) || currentUser?.email?.split("@")[0] || "Пользователь";
         container.innerHTML = `
           <div class="compact-item">
-            <h3>${name}</h3>
+            <h3>${escapeHtml(name)}</h3>
             <span class="muted">Валюта: ${currentUser?.currency || "RUB"}</span>
           </div>
           ${items.length ? items.map(item => `

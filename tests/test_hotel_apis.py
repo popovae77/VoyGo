@@ -52,7 +52,7 @@ def test_travelpayouts_uses_serpapi_live_price_without_comfort_discount():
         price_per_night=Decimal("4200.00"),
         source="Google Hotels / SerpApi",
     )
-    provider._fetch_flight_price = MagicMock(return_value=(None, "mock", None))
+    provider._fetch_flight_price = MagicMock(return_value=(None, "mock", None, None))
 
     quote = provider.get_quote(
         destination="Сочи",

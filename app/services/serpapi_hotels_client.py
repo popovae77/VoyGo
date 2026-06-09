@@ -21,7 +21,7 @@ CITY_QUERY: dict[str, str] = {item["value"]: item["title"] for item in DESTINATI
 
 
 class SerpApiHotelsClient:
-    def __init__(self, api_key: str, timeout: float = 30.0) -> None:
+    def __init__(self, api_key: str, timeout: float = 10.0) -> None:
         self.api_key = api_key
         self.timeout = timeout
 
@@ -89,6 +89,26 @@ class SerpApiHotelsClient:
             return Decimal(str(total["extracted_lowest"])).quantize(Decimal("0.01"))
         return None
 
+    @staticmethod
+    def _property_booking_url(item: dict) -> str:
+        prices = item.get("prices")
+        if isinstance(prices, list):
+            preferred = ("booking.com", "hotels.com", "agoda.com", "ostrovok")
+            for vendor in preferred:
+                for price_row in prices:
+                    if not isinstance(price_row, dict) or not price_row.get("link"):
+                        continue
+                    source = str(price_row.get("source") or price_row.get("vendor") or "").lower()
+                    if vendor in source:
+                        return str(price_row["link"])
+            for price_row in prices:
+                if isinstance(price_row, dict) and price_row.get("link"):
+                    return str(price_row["link"])
+        for key in ("link", "serpapi_property_details_link", "google_hotels_link"):
+            if item.get(key):
+                return str(item[key])
+        return ""
+
     @classmethod
     def _pick_best_property(cls, payload: dict) -> tuple[Decimal, str, str] | None:
         best: tuple[Decimal, str, str] | None = None
@@ -103,18 +123,9 @@ class SerpApiHotelsClient:
                 if price is None:
                     continue
                 name = str(item.get("name") or "Отель")
-                url = (
-                    item.get("link")
-                    or item.get("serpapi_property_details_link")
-                    or item.get("google_hotels_link")
-                )
-                if not url and item.get("property_token"):
-                    url = (
-                        "https://serpapi.com/search.json?engine=google_hotels&property_token="
-                        + quote(str(item["property_token"]), safe="")
-                    )
+                url = cls._property_booking_url(item)
                 if best is None or price < best[0]:
-                    best = (price, name, str(url) if url else "")
+                    best = (price, name, url)
         if best is None:
             return None
         return best[0], best[1], best[2]
