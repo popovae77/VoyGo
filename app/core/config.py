@@ -34,8 +34,12 @@ class Settings(BaseSettings):
     smtp_from: str | None = None
     smtp_use_tls: bool = True
     smtp_use_ssl: bool = False
+    # smtp | rusender | unisender | brevo
     email_provider: str = "smtp"
     brevo_api_key: str | None = None
+    rusender_api_key: str | None = None
+    unisender_api_key: str | None = None
+    unisender_api_url: str = "https://goapi.unisender.ru/ru/transactional/api/v1"
     app_public_url: str = "http://127.0.0.1:8000"
     app_debug: bool = False
 
@@ -52,9 +56,21 @@ class Settings(BaseSettings):
         return bool(self.brevo_api_key and (self.smtp_from or self.smtp_user))
 
     @property
+    def rusender_configured(self) -> bool:
+        return bool(self.rusender_api_key and (self.smtp_from or self.smtp_user))
+
+    @property
+    def unisender_configured(self) -> bool:
+        return bool(self.unisender_api_key and (self.smtp_from or self.smtp_user))
+
+    @property
     def email_configured(self) -> bool:
         if self.email_provider == "brevo":
             return self.brevo_configured
+        if self.email_provider == "rusender":
+            return self.rusender_configured
+        if self.email_provider == "unisender":
+            return self.unisender_configured
         return self.smtp_configured
 
 

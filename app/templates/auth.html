@@ -53,12 +53,10 @@
 </head>
 <body class="auth-page">
   <div class="auth-shell">
-    <div class="auth-brand" role="img" aria-label="Терраса с видом на море">
+    <div class="auth-brand">
       <div class="auth-brand-inner">
-        <span class="auth-brand-tag">Voyago / travel</span>
-        <div class="mark">V</div>
-        <strong>Voyago</strong>
-        <p class="lead">Умный подбор путешествий под бюджет — как в журнале, только с реальными ценами.</p>
+        <h2 class="auth-brand-title"><span class="auth-brand-v">V</span>OYAGO</h2>
+        <p class="auth-brand-lead">Умный подбор путешествий под любой бюджет.</p>
       </div>
     </div>
 
@@ -228,7 +226,7 @@
         if (reg.welcome_email_sent) {
           showStatus("Аккаунт создан. На почту отправлено письмо с подтверждением регистрации.");
         } else {
-          showStatus("Аккаунт создан. Письмо не отправлено — настройте SMTP в .env (Mail.ru, Gmail).");
+          showStatus("Аккаунт создан. Письмо не отправлено — настройте RuSender или UniSender в .env (см. .env.example).");
         }
         const data = await request("/auth/login", {
           method: "POST",
@@ -263,7 +261,7 @@
           );
           return;
         }
-        text += " Письмо не ушло. Используйте EMAIL_PROVIDER=brevo (см. .env.example) или APP_DEBUG=true.";
+        text += " Письмо не ушло. Настройте EMAIL_PROVIDER=rusender или unisender в .env (см. .env.example), либо APP_DEBUG=true для ссылки на экране.";
         showStatus(text);
       } catch (err) {
         showStatus(err.message, true);
