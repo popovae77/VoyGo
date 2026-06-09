@@ -226,7 +226,7 @@
         if (reg.welcome_email_sent) {
           showStatus("Аккаунт создан. На почту отправлено письмо с подтверждением регистрации.");
         } else {
-          showStatus("Аккаунт создан. Письмо не отправлено — настройте RuSender или UniSender в .env (см. .env.example).");
+          showStatus("Аккаунт создан. Письмо не отправлено — при APP_DEBUG=true это нормально для теста.");
         }
         const data = await request("/auth/login", {
           method: "POST",
@@ -261,7 +261,7 @@
           );
           return;
         }
-        text += " Письмо не ушло. Настройте EMAIL_PROVIDER=rusender или unisender в .env (см. .env.example), либо APP_DEBUG=true для ссылки на экране.";
+        text += " Письмо не ушло. При APP_DEBUG=true ссылка для сброса появится ниже.";
         showStatus(text);
       } catch (err) {
         showStatus(err.message, true);
